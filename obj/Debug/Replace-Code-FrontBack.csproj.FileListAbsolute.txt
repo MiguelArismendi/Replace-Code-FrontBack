@@ -1,0 +1,7 @@
+C:\Users\DESARROLLADOR SENIOR\Documents\BIOFILE\Replace-Code-FrontBack\bin\Debug\Replace-Code-FrontBack.exe.config
+C:\Users\DESARROLLADOR SENIOR\Documents\BIOFILE\Replace-Code-FrontBack\bin\Debug\Replace-Code-FrontBack.exe
+C:\Users\DESARROLLADOR SENIOR\Documents\BIOFILE\Replace-Code-FrontBack\bin\Debug\Replace-Code-FrontBack.pdb
+C:\Users\DESARROLLADOR SENIOR\Documents\BIOFILE\Replace-Code-FrontBack\obj\Debug\Replace-Code-FrontBack.csproj.AssemblyReference.cache
+C:\Users\DESARROLLADOR SENIOR\Documents\BIOFILE\Replace-Code-FrontBack\obj\Debug\Replace-Code-FrontBack.csproj.CoreCompileInputs.cache
+C:\Users\DESARROLLADOR SENIOR\Documents\BIOFILE\Replace-Code-FrontBack\obj\Debug\Replace-Code-FrontBack.exe
+C:\Users\DESARROLLADOR SENIOR\Documents\BIOFILE\Replace-Code-FrontBack\obj\Debug\Replace-Code-FrontBack.pdb
