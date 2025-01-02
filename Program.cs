@@ -27,6 +27,13 @@ namespace Replace_Code_FrontBack
             // Leer el contenido del archivo
             string contenido = File.ReadAllText(archivoAspx);
 
+
+            string PatronFuncionSelecciona = @"if\s*\(\s*\$get\s*\(\s*['""]HdfHistoricoDiagnostico['""]\s*\)\.value\s*!=\s*[""']\s*[""']\s*\)\s*\{";
+            string LineaFuncionSelecciona= "DiagnosticosJsonSelecciona();";
+
+            string contenidoModificado = Regex.Replace(contenido, PatronFuncionSelecciona, m => $"{LineaFuncionSelecciona}\n{m.Value}", RegexOptions.IgnoreCase);
+
+
             // Expresión regular para identificar el fieldset
             string patronFieldset = @"<fieldset[^>]*(id|class)\s*=\s*[""']?FDiagnosticos[""']?[^>]*>.*?</fieldset>";
 
@@ -34,7 +41,7 @@ namespace Replace_Code_FrontBack
             string nuevoContenido = @"<asp:DiagnosticosJson runat=""server"" ID=""DiagnosticosJson"" />";
 
             // Realizar el reemplazo
-            string contenidoModificado = Regex.Replace(contenido, patronFieldset, nuevoContenido, RegexOptions.Singleline);
+             contenidoModificado = Regex.Replace(contenidoModificado, patronFieldset, nuevoContenido, RegexOptions.Singleline);
 
 
             //reemplazando los if
@@ -44,7 +51,7 @@ namespace Replace_Code_FrontBack
             string patronIfTabla = @"if\s*\(\s*\$get\(""TbHistoricoDiagnostico""\)\.getElementsByTagName\('tbody'\)\[0\]\.getElementsByTagName\('tr'\)\.length\s*==\s*0\)[^}]*\{[^}]*\}";
 
             // Reemplazo para comentar los bloques if
-            contenidoModificado = Regex.Replace(contenido, patronIf, m =>
+            contenidoModificado = Regex.Replace(contenidoModificado, patronIf, m =>
             {
                 return $"/*\n{m.Value}\n*/";  // Comenta el bloque if encontrado
             }, RegexOptions.Singleline);
@@ -63,6 +70,20 @@ namespace Replace_Code_FrontBack
             }, RegexOptions.Singleline);
 
 
+
+            string ExpresionContenido = @"<asp:Content\s+[^>]*\bID\s*=\s*""Content4""[^>]*>";
+            string NuevaLineaCodigo = @"<asp:Content ID=""Content0"" ContentPlaceHolderID=""H"" runat=""Server"">
+    <style>
+     .ui-menu {
+      background: #86C1E6;
+     }
+    </style>
+</asp:Content>
+
+<%@ Register Src=""~/HistoriaClinica/DiagnosticosJson.ascx"" TagPrefix=""asp"" TagName=""DiagnosticosJson"" %>";
+
+
+            contenidoModificado = Regex.Replace(contenidoModificado, ExpresionContenido, m => $"{NuevaLineaCodigo}\n{m.Value}", RegexOptions.IgnoreCase);
 
 
 
