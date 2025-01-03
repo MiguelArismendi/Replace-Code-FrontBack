@@ -26,53 +26,56 @@ namespace Replace_Code_FrontBack
 
             // Leer el contenido del archivo
             string contenido = File.ReadAllText(archivoAspx);
+            string extension = Path.GetExtension(archivoAspx).ToLower();
+            string contenidoModificado = contenido;
 
-
-            string PatronFuncionSelecciona = @"if\s*\(\s*\$get\s*\(\s*['""]HdfHistoricoDiagnostico['""]\s*\)\.value\s*!=\s*[""']\s*[""']\s*\)\s*\{";
-            string LineaFuncionSelecciona= "DiagnosticosJsonSelecciona();";
-
-            string contenidoModificado = Regex.Replace(contenido, PatronFuncionSelecciona, m => $"{LineaFuncionSelecciona}\n{m.Value}", RegexOptions.IgnoreCase);
-
-
-            // Expresión regular para identificar el fieldset
-            string patronFieldset = @"<fieldset[^>]*(id|class)\s*=\s*[""']?FDiagnosticos[""']?[^>]*>.*?</fieldset>";
-
-            // Reemplazo con el nuevo contenido
-            string nuevoContenido = @"<asp:DiagnosticosJson runat=""server"" ID=""DiagnosticosJson"" />";
-
-            // Realizar el reemplazo
-             contenidoModificado = Regex.Replace(contenidoModificado, patronFieldset, nuevoContenido, RegexOptions.Singleline);
-
-
-            //reemplazando los if
-
-            // Expresión regular para identificar los bloques de if, incluyendo corchetes internos
-            string patronIf = @"if\s*\(\s*\$get\(['""]?(HdfHistoricoDiagnostico|TbHistoricoDiagnostico|HdfDiagnosticos)['""]?\)[^}]*\{([^{}]*\{[^}]*\}[^{}]*)*\}";
-            string patronIfTabla = @"if\s*\(\s*\$get\(""TbHistoricoDiagnostico""\)\.getElementsByTagName\('tbody'\)\[0\]\.getElementsByTagName\('tr'\)\.length\s*==\s*0\)[^}]*\{[^}]*\}";
-
-            // Reemplazo para comentar los bloques if
-            contenidoModificado = Regex.Replace(contenidoModificado, patronIf, m =>
+            if (extension == ".aspx")
             {
-                return $"/*\n{m.Value}\n*/";  // Comenta el bloque if encontrado
-            }, RegexOptions.Singleline);
+                string PatronFuncionSelecciona = @"if\s*\(\s*\$get\s*\(\s*['""]HdfHistoricoDiagnostico['""]\s*\)\.value\s*!=\s*[""']\s*[""']\s*\)\s*\{";
+                string LineaFuncionSelecciona = "DiagnosticosJsonSelecciona();";
 
-            // Reemplazo adicional para comentar el código que no está dentro de los bloques if
-            string patronAsignacion = @"\$get\(['""]?(HdfHistoricoDiagnostico|HdfDiagnosticos)['""]?\)\.value\s*=\s*""\s*"";";
-            contenidoModificado = Regex.Replace(contenidoModificado, patronAsignacion, m =>
-            {
-                return $"/*\n{m.Value}\n*/";  // Comenta la asignación que no está dentro de los if
-            });            
-
-            // Reemplazo para comentar el bloque if
-            contenidoModificado = Regex.Replace(contenidoModificado, patronIfTabla, m =>
-            {
-                return $"/*\n{m.Value}\n*/";  // Comentar solo este bloque if
-            }, RegexOptions.Singleline);
+                contenidoModificado = Regex.Replace(contenido, PatronFuncionSelecciona, m => $"{LineaFuncionSelecciona}\n{m.Value}", RegexOptions.IgnoreCase);
 
 
+                // Expresión regular para identificar el fieldset
+                string patronFieldset = @"<fieldset[^>]*(id|class)\s*=\s*[""']?FDiagnosticos[""']?[^>]*>.*?</fieldset>";
 
-            string ExpresionContenido = @"<asp:Content\s+[^>]*\bID\s*=\s*""Content4""[^>]*>";
-            string NuevaLineaCodigo = @"<asp:Content ID=""Content0"" ContentPlaceHolderID=""H"" runat=""Server"">
+                // Reemplazo con el nuevo contenido
+                string nuevoContenido = @"<asp:DiagnosticosJson runat=""server"" ID=""DiagnosticosJson"" />";
+
+                // Realizar el reemplazo
+                contenidoModificado = Regex.Replace(contenidoModificado, patronFieldset, nuevoContenido, RegexOptions.Singleline);
+
+
+                //reemplazando los if
+
+                // Expresión regular para identificar los bloques de if, incluyendo corchetes internos
+                string patronIf = @"if\s*\(\s*\$get\(['""]?(HdfHistoricoDiagnostico|TbHistoricoDiagnostico|HdfDiagnosticos)['""]?\)[^}]*\{([^{}]*\{[^}]*\}[^{}]*)*\}";
+                string patronIfTabla = @"if\s*\(\s*\$get\(""TbHistoricoDiagnostico""\)\.getElementsByTagName\('tbody'\)\[0\]\.getElementsByTagName\('tr'\)\.length\s*==\s*0\)[^}]*\{[^}]*\}";
+
+                // Reemplazo para comentar los bloques if
+                contenidoModificado = Regex.Replace(contenidoModificado, patronIf, m =>
+                {
+                    return $"/*\n{m.Value}\n*/";  // Comenta el bloque if encontrado
+                }, RegexOptions.Singleline);
+
+                // Reemplazo adicional para comentar el código que no está dentro de los bloques if
+                string patronAsignacion = @"\$get\(['""]?(HdfHistoricoDiagnostico|HdfDiagnosticos)['""]?\)\.value\s*=\s*""\s*"";";
+                contenidoModificado = Regex.Replace(contenidoModificado, patronAsignacion, m =>
+                {
+                    return $"/*\n{m.Value}\n*/";  // Comenta la asignación que no está dentro de los if
+                });
+
+                // Reemplazo para comentar el bloque if
+                contenidoModificado = Regex.Replace(contenidoModificado, patronIfTabla, m =>
+                {
+                    return $"/*\n{m.Value}\n*/";  // Comentar solo este bloque if
+                }, RegexOptions.Singleline);
+
+
+
+                string ExpresionContenido = @"<asp:Content\s+[^>]*\bID\s*=\s*""Content4""[^>]*>";
+                string NuevaLineaCodigo = @"<asp:Content ID=""Content0"" ContentPlaceHolderID=""H"" runat=""Server"">
     <style>
      .ui-menu {
       background: #86C1E6;
@@ -83,12 +86,31 @@ namespace Replace_Code_FrontBack
 <%@ Register Src=""~/HistoriaClinica/DiagnosticosJson.ascx"" TagPrefix=""asp"" TagName=""DiagnosticosJson"" %>";
 
 
-            contenidoModificado = Regex.Replace(contenidoModificado, ExpresionContenido, m => $"{NuevaLineaCodigo}\n{m.Value}", RegexOptions.IgnoreCase);
+                contenidoModificado = Regex.Replace(contenidoModificado, ExpresionContenido, m => $"{NuevaLineaCodigo}\n{m.Value}", RegexOptions.IgnoreCase);
 
 
 
-            // Guardar los cambios en el archivo
-            File.WriteAllText(archivoAspx, contenidoModificado);
+
+                string PatronReferencia = @"<link\s+[^>]*href\s*=\s*""\.\./Estilos/jquery-ui\.css""[^>]*>";
+
+
+                contenidoModificado = Regex.Replace(contenidoModificado, PatronReferencia, match => $"<!-- {match.Value} -->");
+
+
+                PatronReferencia = @"<script\s+[^>]*src\s*=\s*""\.\./Scripts/jquery-ui\.js""[^>]*>\s*</script>";
+
+
+                contenidoModificado = Regex.Replace(contenidoModificado, PatronReferencia, match => $"<!-- {match.Value} -->");
+
+            }
+            else if (extension == ".vb")
+            {
+                string PatronReferencia = @"<link\s+[^>]*href\s*=\s*""\.\./Estilos/jquery-ui\.css""[^>]*>";
+            }
+
+
+                // Guardar los cambios en el archivo
+                File.WriteAllText(archivoAspx, contenidoModificado);
             Console.WriteLine("Reemplazo completado.");
 
 
