@@ -26,16 +26,16 @@ namespace Replace_Code_FrontBack
             }
 
             // Leer el contenido del archivo
-            string contenido = File.ReadAllText(FormularioModificar);
+            string ContenidoFormulario = File.ReadAllText(FormularioModificar);
             string extension = Path.GetExtension(FormularioModificar).ToLower();
-            string contenidoModificado = contenido;
+            string contenidoModificado = ContenidoFormulario;
 
             if (extension == ".aspx")
             {
                 string PatronFuncionSelecciona = @"if\s*\(\s*\$get\s*\(\s*['""]HdfHistoricoDiagnostico['""]\s*\)\.value\s*!=\s*[""']\s*[""']\s*\)\s*\{";
                 string LineaFuncionSelecciona = "DiagnosticosJsonSelecciona();";
 
-                contenidoModificado = Regex.Replace(contenido, PatronFuncionSelecciona, m => $"{LineaFuncionSelecciona}\n{m.Value}", RegexOptions.IgnoreCase);
+                contenidoModificado = Regex.Replace(ContenidoFormulario, PatronFuncionSelecciona, m => $"{LineaFuncionSelecciona}\n{m.Value}", RegexOptions.IgnoreCase);
 
 
                 // Expresión regular para identificar el fieldset
