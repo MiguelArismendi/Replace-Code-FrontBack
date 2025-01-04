@@ -33,7 +33,7 @@ namespace Replace_Code_FrontBack
                 string ContenidoModificado = ContenidoOriginal;
 
                 string ArchivoViejo = Path.Combine(Path.GetDirectoryName(Archivo),
-                                    Path.GetFileNameWithoutExtension(Archivo) + "viejo" + Extension);
+                                    Path.GetFileNameWithoutExtension(Archivo) + "Viejo" + Extension);
 
                 if (Extension == ".aspx")
                 {
