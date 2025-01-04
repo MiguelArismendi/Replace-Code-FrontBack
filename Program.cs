@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Xml;
 using System.Text.RegularExpressions;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Replace_Code_FrontBack
 {
@@ -14,19 +15,19 @@ namespace Replace_Code_FrontBack
         static void Main(string[] args)
         {
             // Ruta del archivo .aspx
-            string rutaBase = AppDomain.CurrentDomain.BaseDirectory;
-            string archivoAspx = Path.Combine(rutaBase, "Archivos", "EvaluacionMedicaGeneral.aspx");
+            string RutaProyecto = AppDomain.CurrentDomain.BaseDirectory;
+            string FormularioModificar = Path.Combine(RutaProyecto, "Archivos", "EvaluacionMedicaGeneral.aspx.vb");
 
             // Verificar si el archivo existe
-            if (!File.Exists(archivoAspx))
+            if (!File.Exists(FormularioModificar))
             {
-                Console.WriteLine($"El archivo no existe: {archivoAspx}");
+                Console.WriteLine($"El archivo no existe: {FormularioModificar}");
                 return;
             }
 
             // Leer el contenido del archivo
-            string contenido = File.ReadAllText(archivoAspx);
-            string extension = Path.GetExtension(archivoAspx).ToLower();
+            string contenido = File.ReadAllText(FormularioModificar);
+            string extension = Path.GetExtension(FormularioModificar).ToLower();
             string contenidoModificado = contenido;
 
             if (extension == ".aspx")
@@ -105,12 +106,27 @@ namespace Replace_Code_FrontBack
             }
             else if (extension == ".vb")
             {
-                string PatronReferencia = @"<link\s+[^>]*href\s*=\s*""\.\./Estilos/jquery-ui\.css""[^>]*>";
+                // Bloques específicos que necesitas comentar
+                string[] patrones = new string[]
+                {
+            @"SqlDs\.SelectCommand\s*=\s*""HistoriaClinica\.HistoricoDiagnosticosSelecciona""[\s\S]*?End If",
+            @"SqlDs\.SelectCommand\s*=\s*""HistoriaClinica\.DiagnosticosSelecciona""[\s\S]*?End If"
+                };
+
+                foreach (var patron in patrones)
+                {
+                    contenidoModificado = Regex.Replace(
+                        contenidoModificado,
+                        patron,
+                        match => "' " + match.Value.Replace("\r\n", "\r\n' "),
+                        RegexOptions.Singleline
+                    );
+                }
             }
 
 
-                // Guardar los cambios en el archivo
-                File.WriteAllText(archivoAspx, contenidoModificado);
+            // Guardar los cambios en el archivo
+            File.WriteAllText(FormularioModificar, contenidoModificado);
             Console.WriteLine("Reemplazo completado.");
 
 
