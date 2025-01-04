@@ -14,11 +14,9 @@ namespace Replace_Code_FrontBack
     {
         static void Main(string[] args)
         {
-            // Ruta del archivo .aspx
             string RutaProyecto = AppDomain.CurrentDomain.BaseDirectory;
             string FormularioModificar = Path.Combine(RutaProyecto, "Archivos", "EvaluacionMedicaGeneral.aspx.vb");
 
-            // Verificar si el archivo existe
             if (!File.Exists(FormularioModificar))
             {
                 Console.WriteLine($"El archivo no existe: {FormularioModificar}");
@@ -27,84 +25,58 @@ namespace Replace_Code_FrontBack
 
             // Leer el contenido del archivo
             string ContenidoFormulario = File.ReadAllText(FormularioModificar);
-            string extension = Path.GetExtension(FormularioModificar).ToLower();
-            string contenidoModificado = ContenidoFormulario;
+            string ExtensionFormulario = Path.GetExtension(FormularioModificar).ToLower();
+            string ContenidoModificado = ContenidoFormulario;
+            string PatronExpresionRegular;
+            string NuevaLineaReemplazar;
 
-            if (extension == ".aspx")
+            if (ExtensionFormulario == ".aspx")
             {
-                string PatronFuncionSelecciona = @"if\s*\(\s*\$get\s*\(\s*['""]HdfHistoricoDiagnostico['""]\s*\)\.value\s*!=\s*[""']\s*[""']\s*\)\s*\{";
-                string LineaFuncionSelecciona = "DiagnosticosJsonSelecciona();";
+                // Se busca el inicio del llenado del historico de los diagnósticos y se agrega la función que reemplaza este llenado
+                PatronExpresionRegular = @"if\s*\(\s*\$get\s*\(\s*['""]HdfHistoricoDiagnostico['""]\s*\)\.value\s*!=\s*[""']\s*[""']\s*\)\s*\{";
+                NuevaLineaReemplazar = "DiagnosticosJsonSelecciona();";
+                ContenidoModificado = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, m => $"{NuevaLineaReemplazar}\n{m.Value}", RegexOptions.IgnoreCase);
 
-                contenidoModificado = Regex.Replace(ContenidoFormulario, PatronFuncionSelecciona, m => $"{LineaFuncionSelecciona}\n{m.Value}", RegexOptions.IgnoreCase);
+                // Se busca el fieldset en el HTML que contiene los diagnósticos y se reemplaza por el control de usuario
+                PatronExpresionRegular = @"<fieldset[^>]*(id|class)\s*=\s*[""']?FDiagnosticos[""']?[^>]*>.*?</fieldset>";
+                NuevaLineaReemplazar = @"<asp:DiagnosticosJson runat=""server"" ID=""DiagnosticosJson"" />";
+                ContenidoModificado = Regex.Replace(ContenidoModificado, PatronExpresionRegular, NuevaLineaReemplazar, RegexOptions.Singleline);
 
+                // Se busca en el archivo el bloque de código que llena el histórico y los diagnósticos para comentar todo este código
+                PatronExpresionRegular = @"if\s*\(\s*\$get\(['""]?(HdfHistoricoDiagnostico|TbHistoricoDiagnostico|HdfDiagnosticos)['""]?\)[^}]*\{([^{}]*\{[^}]*\}[^{}]*)*\}";
+                ContenidoModificado = Regex.Replace(ContenidoModificado, PatronExpresionRegular, m => { return $"/*\n{m.Value}\n*/"; }, RegexOptions.Singleline);
 
-                // Expresión regular para identificar el fieldset
-                string patronFieldset = @"<fieldset[^>]*(id|class)\s*=\s*[""']?FDiagnosticos[""']?[^>]*>.*?</fieldset>";
+                //Se busca en el archivo el bloque de código que limpia las variables que llenan los diagnósticos y se comentan
+                PatronExpresionRegular = @"\$get\(['""]?(HdfHistoricoDiagnostico|HdfDiagnosticos)['""]?\)\.value\s*=\s*""\s*"";";
+                ContenidoModificado = Regex.Replace(ContenidoModificado, PatronExpresionRegular, m => { return $"/*\n{m.Value}\n*/"; });
 
-                // Reemplazo con el nuevo contenido
-                string nuevoContenido = @"<asp:DiagnosticosJson runat=""server"" ID=""DiagnosticosJson"" />";
-
-                // Realizar el reemplazo
-                contenidoModificado = Regex.Replace(contenidoModificado, patronFieldset, nuevoContenido, RegexOptions.Singleline);
-
-
-                //reemplazando los if
-
-                // Expresión regular para identificar los bloques de if, incluyendo corchetes internos
-                string patronIf = @"if\s*\(\s*\$get\(['""]?(HdfHistoricoDiagnostico|TbHistoricoDiagnostico|HdfDiagnosticos)['""]?\)[^}]*\{([^{}]*\{[^}]*\}[^{}]*)*\}";
-                string patronIfTabla = @"if\s*\(\s*\$get\(""TbHistoricoDiagnostico""\)\.getElementsByTagName\('tbody'\)\[0\]\.getElementsByTagName\('tr'\)\.length\s*==\s*0\)[^}]*\{[^}]*\}";
-
-                // Reemplazo para comentar los bloques if
-                contenidoModificado = Regex.Replace(contenidoModificado, patronIf, m =>
-                {
-                    return $"/*\n{m.Value}\n*/";  // Comenta el bloque if encontrado
-                }, RegexOptions.Singleline);
-
-                // Reemplazo adicional para comentar el código que no está dentro de los bloques if
-                string patronAsignacion = @"\$get\(['""]?(HdfHistoricoDiagnostico|HdfDiagnosticos)['""]?\)\.value\s*=\s*""\s*"";";
-                contenidoModificado = Regex.Replace(contenidoModificado, patronAsignacion, m =>
-                {
-                    return $"/*\n{m.Value}\n*/";  // Comenta la asignación que no está dentro de los if
-                });
-
-                // Reemplazo para comentar el bloque if
-                contenidoModificado = Regex.Replace(contenidoModificado, patronIfTabla, m =>
-                {
-                    return $"/*\n{m.Value}\n*/";  // Comentar solo este bloque if
-                }, RegexOptions.Singleline);
+                //Se busca en el archivo el bloque de validación de la tabla del histórico de los diagnósticos y se comenta
+                PatronExpresionRegular = @"if\s*\(\s*\$get\(""TbHistoricoDiagnostico""\)\.getElementsByTagName\('tbody'\)\[0\]\.getElementsByTagName\('tr'\)\.length\s*==\s*0\)[^}]*\{[^}]*\}";
+                ContenidoModificado = Regex.Replace(ContenidoModificado, PatronExpresionRegular, m => { return $"/*\n{m.Value}\n*/"; }, RegexOptions.Singleline);
 
 
+                //Se busca el inicio del content 4 y se agrega el registro del archivo de usuario y un content0 con el style necesario para que funcionen los autocomplete
+                PatronExpresionRegular = @"<asp:Content\s+[^>]*\bID\s*=\s*""Content4""[^>]*>";
+                NuevaLineaReemplazar = @"<asp:Content ID=""Content0"" ContentPlaceHolderID=""H"" runat=""Server"">
+                                            <style>
+                                             .ui-menu {
+                                              background: #86C1E6;
+                                             }
+                                            </style>
+                                        </asp:Content>
+                                        
+                                        <%@ Register Src=""~/HistoriaClinica/DiagnosticosJson.ascx"" TagPrefix=""asp"" TagName=""DiagnosticosJson"" %>";
+                ContenidoModificado = Regex.Replace(ContenidoModificado, PatronExpresionRegular, m => $"{NuevaLineaReemplazar}\n{m.Value}", RegexOptions.IgnoreCase);
 
-                string ExpresionContenido = @"<asp:Content\s+[^>]*\bID\s*=\s*""Content4""[^>]*>";
-                string NuevaLineaCodigo = @"<asp:Content ID=""Content0"" ContentPlaceHolderID=""H"" runat=""Server"">
-    <style>
-     .ui-menu {
-      background: #86C1E6;
-     }
-    </style>
-</asp:Content>
+                //Se busca en el código el bloque que trae los estilos y se comentan ya que interfieren con el estilo del control de usuario
+                PatronExpresionRegular = @"<link\s+[^>]*href\s*=\s*""\.\./Estilos/jquery-ui\.css""[^>]*>";
+                ContenidoModificado = Regex.Replace(ContenidoModificado, PatronExpresionRegular, match => $"<!-- {match.Value} -->");
 
-<%@ Register Src=""~/HistoriaClinica/DiagnosticosJson.ascx"" TagPrefix=""asp"" TagName=""DiagnosticosJson"" %>";
-
-
-                contenidoModificado = Regex.Replace(contenidoModificado, ExpresionContenido, m => $"{NuevaLineaCodigo}\n{m.Value}", RegexOptions.IgnoreCase);
-
-
-
-
-                string PatronReferencia = @"<link\s+[^>]*href\s*=\s*""\.\./Estilos/jquery-ui\.css""[^>]*>";
-
-
-                contenidoModificado = Regex.Replace(contenidoModificado, PatronReferencia, match => $"<!-- {match.Value} -->");
-
-
-                PatronReferencia = @"<script\s+[^>]*src\s*=\s*""\.\./Scripts/jquery-ui\.js""[^>]*>\s*</script>";
-
-
-                contenidoModificado = Regex.Replace(contenidoModificado, PatronReferencia, match => $"<!-- {match.Value} -->");
-
+                //Se busca en el código el bloque que trae los estilos y se comentan ya que interfieren con el estilo del control de usuario
+                PatronExpresionRegular = @"<script\s+[^>]*src\s*=\s*""\.\./Scripts/jquery-ui\.js""[^>]*>\s*</script>";
+                ContenidoModificado = Regex.Replace(ContenidoModificado, PatronExpresionRegular, match => $"<!-- {match.Value} -->");
             }
-            else if (extension == ".vb")
+            else if (ExtensionFormulario == ".vb")
             {
                 // Bloques específicos que necesitas comentar
                 string[] patrones = new string[]
@@ -115,8 +87,8 @@ namespace Replace_Code_FrontBack
 
                 foreach (var patron in patrones)
                 {
-                    contenidoModificado = Regex.Replace(
-                        contenidoModificado,
+                    ContenidoModificado = Regex.Replace(
+                        ContenidoModificado,
                         patron,
                         match => "' " + match.Value.Replace("\r\n", "\r\n' "),
                         RegexOptions.Singleline
@@ -126,7 +98,7 @@ namespace Replace_Code_FrontBack
 
 
             // Guardar los cambios en el archivo
-            File.WriteAllText(FormularioModificar, contenidoModificado);
+            File.WriteAllText(FormularioModificar, ContenidoModificado);
             Console.WriteLine("Reemplazo completado.");
 
 
