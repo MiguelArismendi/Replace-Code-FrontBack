@@ -15,7 +15,7 @@ namespace Replace_Code_FrontBack
         static void Main(string[] args)
         {
             string RutaProyecto = AppDomain.CurrentDomain.BaseDirectory;
-            string FormularioModificar = Path.Combine(RutaProyecto, "Archivos", "EvaluacionMedicaGeneral.aspx.vb");
+            string FormularioModificar = Path.Combine(RutaProyecto, "Archivos", "EvaluacionMedicaGeneral.aspx");
 
             if (!File.Exists(FormularioModificar))
             {
@@ -58,14 +58,14 @@ namespace Replace_Code_FrontBack
                 //Se busca el inicio del content 4 y se agrega el registro del archivo de usuario y un content0 con el style necesario para que funcionen los autocomplete
                 PatronExpresionRegular = @"<asp:Content\s+[^>]*\bID\s*=\s*""Content4""[^>]*>";
                 NuevaLineaReemplazar = @"<asp:Content ID=""Content0"" ContentPlaceHolderID=""H"" runat=""Server"">
-                                            <style>
-                                             .ui-menu {
-                                              background: #86C1E6;
-                                             }
-                                            </style>
-                                        </asp:Content>
-                                        
-                                        <%@ Register Src=""~/HistoriaClinica/DiagnosticosJson.ascx"" TagPrefix=""asp"" TagName=""DiagnosticosJson"" %>";
+<style>
+     .ui-menu {
+      background: #86C1E6;
+     }
+</style>
+</asp:Content>
+
+<%@ Register Src=""~/HistoriaClinica/DiagnosticosJson.ascx"" TagPrefix=""asp"" TagName=""DiagnosticosJson"" %>";
                 ContenidoModificado = Regex.Replace(ContenidoModificado, PatronExpresionRegular, m => $"{NuevaLineaReemplazar}\n{m.Value}", RegexOptions.IgnoreCase);
 
                 //Se busca en el código el bloque que trae los estilos y se comentan ya que interfieren con el estilo del control de usuario
@@ -79,34 +79,25 @@ namespace Replace_Code_FrontBack
             else if (ExtensionFormulario == ".vb")
             {
                 // Bloques específicos que necesitas comentar
-                string[] patrones = new string[]
+                string[] PatronesExpresionesRegulares = new string[]
                 {
             @"SqlDs\.SelectCommand\s*=\s*""HistoriaClinica\.HistoricoDiagnosticosSelecciona""[\s\S]*?End If",
             @"SqlDs\.SelectCommand\s*=\s*""HistoriaClinica\.DiagnosticosSelecciona""[\s\S]*?End If"
                 };
 
-                foreach (var patron in patrones)
+                foreach (var Patron in PatronesExpresionesRegulares)
                 {
                     ContenidoModificado = Regex.Replace(
                         ContenidoModificado,
-                        patron,
-                        match => "' " + match.Value.Replace("\r\n", "\r\n' "),
+                        Patron,
+                        Concidencia => "' " + Concidencia.Value.Replace("\r\n", "\r\n' "),
                         RegexOptions.Singleline
                     );
                 }
             }
-
-
-            // Guardar los cambios en el archivo
+            
             File.WriteAllText(FormularioModificar, ContenidoModificado);
             Console.WriteLine("Reemplazo completado.");
-
-
-
-
-
-
-
         }
     }
 }
