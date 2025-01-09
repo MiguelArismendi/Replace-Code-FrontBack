@@ -105,6 +105,31 @@ namespace Replace_Code_FrontBack
             PatronExpresionRegular = @"<script\s+[^>]*src\s*=\s*""\.\./Scripts/jquery-ui\.js""[^>]*>\s*</script>";
             ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, match => $"<!-- {match.Value} -->");
 
+
+            //Se busca el inicio del content 4 y se agrega el registro del archivo de usuario y un content0 con el style necesario para que funcionen los autocomplete
+            PatronExpresionRegular = @"(if\s*\([^\)]*Diagnosticos\.length\s*>\s*0\s*\)\s*\{)([\s\S]*?)(?=\s*\}(?!\s*\)\s*;))";//@"(if\s*\([^\)]*Diagnosticos\.length\s*>\s*0\s*\)\s*\{)([\s\S]*?)(?!\s*\)\s*;)"; 
+            NuevaLineaReemplazar = "                            DiagnosticosJsonSelecciona();";
+            ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, m =>
+            {
+                // Capturamos la apertura y el cierre del if
+                string Apertura = m.Groups[1].Value;  // Mantiene el `if` y su apertura
+                string Cierre = m.Groups[3].Value;    // Mantiene el cierre del bloque `if`                
+
+                // Concatenamos el bloque con el nuevo contenido
+                return Apertura + "\n" + NuevaLineaReemplazar + Cierre;
+            });
+
+            PatronExpresionRegular = @"(if\s*\([^\)]*HistoricoDiagnosticos\.length\s*>\s*0\s*\)\s*\{)([\s\S]*?)(\})";
+            ContenidoFormulario =  Regex.Replace(ContenidoFormulario, PatronExpresionRegular, m =>
+            {
+                string Apertura = m.Groups[1].Value;  // `if` y apertura de la llave
+                string Cuerpo = m.Groups[2].Value;    // Cuerpo del if
+                string Cierre = m.Groups[3].Value;    // Cierre de la llave
+
+                // Comentar todo el contenido del bloque
+                return $"//{Apertura}\n    //{Cuerpo.Replace("\n", "\n    //")}\n //{Cierre}";
+            });
+
             return ContenidoFormulario;
         }
 
