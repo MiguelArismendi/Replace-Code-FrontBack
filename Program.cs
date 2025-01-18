@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net.NetworkInformation;
 using System.Text.RegularExpressions;
 
 
@@ -11,6 +12,7 @@ namespace Replace_Code_FrontBack
         {
             string RutaProyecto = AppDomain.CurrentDomain.BaseDirectory;
             string CarpetaArchivos = Path.Combine(RutaProyecto, "Archivos");
+            
 
             if (!Directory.Exists(CarpetaArchivos))
             {
