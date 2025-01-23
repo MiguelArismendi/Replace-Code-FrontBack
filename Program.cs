@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Net.NetworkInformation;
-using System.Reflection.Emit;
 using System.Text.RegularExpressions;
+using System.Web.Script.Serialization;
+
 
 
 namespace Replace_Code_FrontBack
@@ -89,7 +90,7 @@ namespace Replace_Code_FrontBack
 
             //Se busca en el archivo el bloque de validación de la tabla del histórico de los diagnósticos y se comenta
             PatronExpresionRegular = @"if\s*\(\s*\$get\(""TbHistoricoDiagnostico""\)\.getElementsByTagName\('tbody'\)\[0\]\.getElementsByTagName\('tr'\)\.length\s*==\s*0\)[^}]*\{[^}]*\}";
-            ContenidoFormulario = ComentarCodigoJavascript(ContenidoFormulario,PatronExpresionRegular, RegexOptions.Singleline);
+            ContenidoFormulario = ComentarCodigoJavascript(ContenidoFormulario, PatronExpresionRegular, RegexOptions.Singleline);
             //ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, m => { return $"/*\n{m.Value}\n*/"; }, RegexOptions.Singleline);
 
 
@@ -101,11 +102,13 @@ namespace Replace_Code_FrontBack
 
             //Se busca en el código el bloque que trae los estilos y se comentan ya que interfieren con el estilo del control de usuario
             PatronExpresionRegular = @"<link\s+[^>]*href\s*=\s*""\.\./Estilos/jquery-ui\.css""[^>]*>";
-            ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, match => $"<!-- {match.Value} -->");
+            ContenidoFormulario = ComentarCodigoHTML(ContenidoFormulario, PatronExpresionRegular);
+            //ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, match => $"<!-- {match.Value} -->");
 
             //Se busca en el código el bloque que trae los estilos y se comentan ya que interfieren con el estilo del control de usuario
             PatronExpresionRegular = @"<script\s+[^>]*src\s*=\s*""\.\./Scripts/jquery-ui\.js""[^>]*>\s*</script>";
-            ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, match => $"<!-- {match.Value} -->");
+            ContenidoFormulario = ComentarCodigoHTML(ContenidoFormulario, PatronExpresionRegular);
+            //ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, match => $"<!-- {match.Value} -->");
 
 
             //Se busca el inicio del content 4 y se agrega el registro del archivo de usuario y un content0 con el style necesario para que funcionen los autocomplete
@@ -138,12 +141,27 @@ namespace Replace_Code_FrontBack
         static string ComentarCodigoJavascript(string ContenidoFormulario, string PatronExpresionRegular, RegexOptions OpcionesExpresion = RegexOptions.None)
         {
             //Se busca en el archivo el bloque de código que limpia las variables que llenan los diagnósticos y se comentan            
-            ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, m => { return $"/*\n{m.Value}\n*/"; }, OpcionesExpresion);
+            ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, Considencia => { return $"/*\n{Considencia.Value}\n*/"; }, OpcionesExpresion);
 
             return ContenidoFormulario;
         }
 
-        static string ReemplazarCodigo(string ContenidoFormulario,string PatronExpresionRegular,string NuevoContenido,RegexOptions OpcionesExpresion = RegexOptions.None,bool IncluirLineaOriginal = false)
+        static string ComentarCodigoHTML(string ContenidoFormulario, string PatronExpresionRegular, RegexOptions OpcionesExpresion = RegexOptions.None)
+        {
+            ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, Considencia => { return $"<!-- {Considencia.Value} -->"; }, OpcionesExpresion);
+
+            return ContenidoFormulario;
+        }
+
+        static string ComentarCodigoVisualBasic(string ContenidoFormulario, string PatronExpresionRegular, RegexOptions OpcionesExpresion = RegexOptions.None)
+        {
+            ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, Considencia => { return $"' '{Considencia.Value.Replace("\r\n", "\r\n' ")} "; }, OpcionesExpresion);
+            //Regex.Replace(ContenidoFormulario, PatronExpresionRegular, Concidencia => "' " + Concidencia.Value.Replace("\r\n", "\r\n' "), OpcionesExpresion);
+
+            return ContenidoFormulario;
+        }
+
+        static string ReemplazarCodigo(string ContenidoFormulario, string PatronExpresionRegular, string NuevoContenido, RegexOptions OpcionesExpresion = RegexOptions.None, bool IncluirLineaOriginal = false)
         {
             ContenidoFormulario = Regex.Replace(
                 ContenidoFormulario,
@@ -154,24 +172,45 @@ namespace Replace_Code_FrontBack
             return ContenidoFormulario;
         }
 
+        public class JsonExpresionRegular
+        {
+            public string Nombre { get; set; }
+            public string PatronExpresionRegular { get; set; }
+            public string NuevaLineaReemplazar { get; set; }
+        }
 
 
         static string ProcesarFormularioVb(string ContenidoFormulario)
         {
-            string[] PatronesExpresionesRegulares = new string[]
-             {
-            @"SqlDs\.SelectCommand\s*=\s*""HistoriaClinica\.HistoricoDiagnosticosSelecciona""[\s\S]*?End If",
-            @"SqlDs\.SelectCommand\s*=\s*""HistoriaClinica\.DiagnosticosSelecciona""[\s\S]*?End If"
-             };
+            string RutaProyecto = AppDomain.CurrentDomain.BaseDirectory;
+            string RutaArchivoExpresiones = Path.Combine(RutaProyecto, "Archivos/ExpresionesRegularesBackend.json");
 
-            foreach (var Patron in PatronesExpresionesRegulares)
+            if (!File.Exists(RutaArchivoExpresiones)) // Cambiar Directory.Exists a File.Exists
             {
-                ContenidoFormulario = Regex.Replace(
-                    ContenidoFormulario,
-                    Patron,
-                    Concidencia => "' " + Concidencia.Value.Replace("\r\n", "\r\n' "),
-                    RegexOptions.Singleline
-                );
+                Console.WriteLine($"El archivo no existe: {RutaArchivoExpresiones}");
+                throw new InvalidOperationException($"El archivo no existe: {RutaArchivoExpresiones}");
+            }
+
+            List<JsonExpresionRegular> ExpresionesRegulares;
+
+            var ContenidoJson = File.ReadAllText(RutaArchivoExpresiones); // Cambiar contenidoJson a ContenidoJson
+
+            var Serializador = new JavaScriptSerializer();
+
+            // Deserializar el JSON a un diccionario
+            ExpresionesRegulares = Serializador.Deserialize<List<JsonExpresionRegular>>(ContenidoJson);
+
+            if (ExpresionesRegulares == null)
+            {
+                throw new InvalidOperationException("Debes cargar las expresiones regulares antes de procesar.");
+            }            
+
+            foreach (var PatronExpresionRegular in ExpresionesRegulares)
+            {
+                if (string.IsNullOrEmpty(PatronExpresionRegular.NuevaLineaReemplazar))
+                {
+                    ContenidoFormulario = ComentarCodigoVisualBasic(ContenidoFormulario, PatronExpresionRegular.PatronExpresionRegular, RegexOptions.Singleline);
+                }
             }
 
             return ContenidoFormulario;
