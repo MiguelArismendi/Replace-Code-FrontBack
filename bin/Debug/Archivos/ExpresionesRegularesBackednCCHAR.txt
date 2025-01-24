@@ -1,2 +1,0 @@
-//@"SqlDs\.SelectCommand\s*=\s*""HistoriaClinica\.HistoricoDiagnosticosSelecciona""[\s\S]*?End If",            
-//@"SqlDs\.SelectCommand\s*=\s*""HistoriaClinica\.DiagnosticosSelecciona""[\s\S]*?End If"
