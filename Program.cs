@@ -66,7 +66,7 @@ namespace Replace_Code_FrontBack
         {
 
             string RutaProyecto = AppDomain.CurrentDomain.BaseDirectory;
-            string RutaArchivoExpresiones = Path.Combine(RutaProyecto, "Archivos/ExpresionesRegularesFrontend.json");
+            string RutaArchivoExpresiones = Path.Combine(RutaProyecto, "Archivos/ExpresionesRegulares.json");
 
             if (!File.Exists(RutaArchivoExpresiones)) // Cambiar Directory.Exists a File.Exists
             {
