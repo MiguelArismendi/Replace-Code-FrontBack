@@ -107,47 +107,19 @@ namespace Replace_Code_FrontBack
                     case "ComentarCodigoVisualBasic":
                         ContenidoFormulario = ComentarCodigoVisualBasic(ContenidoFormulario, PatronExpresionRegular.PatronExpresionRegular, OpcionesExpresion);
                         break;
+                    case "ReemplazarCodigoBloques":
+                        ContenidoFormulario = ReemplazarCodigoBloques(ContenidoFormulario, PatronExpresionRegular.PatronExpresionRegular, PatronExpresionRegular.NuevaLineaReemplazar, OpcionesExpresion, PatronExpresionRegular.IncluirLineaOriginal);
+                        break;
+                    case "ComentarCodigoJavascriptBloques":
+                        ContenidoFormulario = ComentarCodigoJavascriptBloques(ContenidoFormulario, PatronExpresionRegular.PatronExpresionRegular, OpcionesExpresion);
+                        break;
                     default:
                         throw new InvalidOperationException($"Método no reconocido: {PatronExpresionRegular.MetodoUsar}");
                 }
                 
             }
 
-            //// Se busca en el archivo el bloque de código que llena el histórico y los diagnósticos para comentar todo este código            
-            //PatronExpresionRegular = @"if\s*\(\s*\$get\(['""]?(HdfHistoricoDiagnostico|TbHistoricoDiagnostico|HdfDiagnosticos)['""]?\)[^}]*\{([^{}]*\{[^}]*\}[^{}]*)*\}";
-            //ContenidoFormulario = ComentarCodigoJavascript(ContenidoFormulario, PatronExpresionRegular);
-            ////ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, m => { return $"/*\n{m.Value}\n*/"; });
-
-
-            ////Se busca en el archivo el bloque de código que limpia las variables que llenan los diagnósticos y se comentan
-            //PatronExpresionRegular = @"\$get\(['""]?(HdfHistoricoDiagnostico|HdfDiagnosticos)['""]?\)\.value\s*=\s*""\s*"";";
-            //ContenidoFormulario = ComentarCodigoJavascript(ContenidoFormulario, PatronExpresionRegular);
-            ////ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, m => { return $"/*\n{m.Value}\n*/"; });
-
-            ////Se busca en el archivo el bloque de validación de la tabla del histórico de los diagnósticos y se comenta
-            //PatronExpresionRegular = @"if\s*\(\s*\$get\(""TbHistoricoDiagnostico""\)\.getElementsByTagName\('tbody'\)\[0\]\.getElementsByTagName\('tr'\)\.length\s*==\s*0\)[^}]*\{[^}]*\}";
-            //ContenidoFormulario = ComentarCodigoJavascript(ContenidoFormulario, PatronExpresionRegular, RegexOptions.Singleline);
-            ////ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, m => { return $"/*\n{m.Value}\n*/"; }, RegexOptions.Singleline);
-
-
-            ////Se busca el inicio del content 4 y se agrega el registro del archivo de usuario y un content0 con el style necesario para que funcionen los autocomplete
-            //PatronExpresionRegular = @"<asp:Content\s+[^>]*\bID\s*=\s*""Content4""[^>]*>";
-            //NuevaLineaReemplazar = @"<%@ Register Src=""~/Componentes/Diagnosticos.ascx"" TagPrefix=""asp"" TagName=""Diagnosticos"" %>";
-            //ContenidoFormulario = ReemplazarCodigo(ContenidoFormulario, PatronExpresionRegular, NuevaLineaReemplazar, RegexOptions.IgnoreCase, true);
-            ////ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, m => $"{NuevaLineaReemplazar}\n{m.Value}", RegexOptions.IgnoreCase);
-
-            ////Se busca en el código el bloque que trae los estilos y se comentan ya que interfieren con el estilo del control de usuario
-            //PatronExpresionRegular = @"<link\s+[^>]*href\s*=\s*""\.\./Estilos/jquery-ui\.css""[^>]*>";
-            //ContenidoFormulario = ComentarCodigoHTML(ContenidoFormulario, PatronExpresionRegular);
-            ////ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, match => $"<!-- {match.Value} -->");
-
-            ////Se busca en el código el bloque que trae los estilos y se comentan ya que interfieren con el estilo del control de usuario
-            //PatronExpresionRegular = @"<script\s+[^>]*src\s*=\s*""\.\./Scripts/jquery-ui\.js""[^>]*>\s*</script>";
-            //ContenidoFormulario = ComentarCodigoHTML(ContenidoFormulario, PatronExpresionRegular);
-            ////ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, match => $"<!-- {match.Value} -->");
-
-
-            ////Se busca el inicio del content 4 y se agrega el registro del archivo de usuario y un content0 con el style necesario para que funcionen los autocomplete
+            //Se busca el inicio del content 4 y se agrega el registro del archivo de usuario y un content0 con el style necesario para que funcionen los autocomplete
             //PatronExpresionRegular = @"(if\s*\([^\)]*Diagnosticos\.length\s*>\s*0\s*\)\s*\{)([\s\S]*?)(?=\s*\}(?!\s*\)\s*;))";//@"(if\s*\([^\)]*Diagnosticos\.length\s*>\s*0\s*\)\s*\{)([\s\S]*?)(?!\s*\)\s*;)"; 
             //NuevaLineaReemplazar = "                            Diagnosticos.DiagnosticosSelecciona();";
             //ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, m =>
@@ -182,6 +154,21 @@ namespace Replace_Code_FrontBack
             return ContenidoFormulario;
         }
 
+        static string ComentarCodigoJavascriptBloques(string ContenidoFormulario, string PatronExpresionRegular, RegexOptions OpcionesExpresion = RegexOptions.None)
+        {
+            ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, m =>
+            {
+                string Apertura = m.Groups[1].Value;  // `if` y apertura de la llave
+                string Cuerpo = m.Groups[2].Value;    // Cuerpo del if
+                string Cierre = m.Groups[3].Value;    // Cierre de la llave
+
+                // Comentar todo el contenido del bloque
+                return $"//{Apertura}\n    //{Cuerpo.Replace("\n", "\n    //")}\n //{Cierre}";
+            });
+
+            return ContenidoFormulario;
+        }
+
         static string ComentarCodigoHTML(string ContenidoFormulario, string PatronExpresionRegular, RegexOptions OpcionesExpresion = RegexOptions.None)
         {
             ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, Coincidencia => { return $"<!-- {Coincidencia.Value} -->"; }, OpcionesExpresion);
@@ -212,6 +199,27 @@ namespace Replace_Code_FrontBack
                 PatronExpresionRegular,
                 m => $"{NuevoContenido}{(IncluirLineaOriginal ? $"\n{m.Value}" : "")}",
                 OpcionesExpresion);
+
+            return ContenidoFormulario;
+        }
+
+        static string ReemplazarCodigoBloques(string ContenidoFormulario, string PatronExpresionRegular, string NuevoContenido, RegexOptions OpcionesExpresion = RegexOptions.None, bool IncluirLineaOriginal = false)
+        {
+
+            if (ContenidoFormulario.Contains(NuevoContenido))
+            {
+                return ContenidoFormulario;
+            }
+
+            ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, m =>
+            {
+                // Capturamos la apertura y el cierre del if
+                string Apertura = m.Groups[1].Value;  // Mantiene el `if` y su apertura
+                string Cierre = m.Groups[3].Value;    // Mantiene el cierre del bloque `if`                
+
+                // Concatenamos el bloque con el nuevo contenido
+                return Apertura + "\n" + NuevoContenido + Cierre;
+            });
 
             return ContenidoFormulario;
         }
