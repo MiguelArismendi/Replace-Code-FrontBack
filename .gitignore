@@ -1,1 +1,2 @@
-Archivos/*
+bin/Debug/Archivos/*
+!bin/Debug/Archivos/.gitkeep
