@@ -149,7 +149,16 @@ namespace Replace_Code_FrontBack
         static string ComentarCodigoJavascript(string ContenidoFormulario, string PatronExpresionRegular, RegexOptions OpcionesExpresion = RegexOptions.None)
         {
             //Se busca en el archivo el bloque de código que limpia las variables que llenan los diagnósticos y se comentan            
-            ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, Coincidencia => { return $"/*\n{Coincidencia.Value}\n*/"; }, OpcionesExpresion);
+            ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, Coincidencia => {
+
+                if (ContenidoFormulario.Contains($"/*\n{Coincidencia.Value}\n*/"))
+                {
+                    return Coincidencia.Value;
+                }
+
+                return $"/*\n{Coincidencia.Value}\n*/"; 
+            
+            }, OpcionesExpresion);
 
             return ContenidoFormulario;
         }
@@ -162,6 +171,12 @@ namespace Replace_Code_FrontBack
                 string Cuerpo = m.Groups[2].Value;    // Cuerpo del if
                 string Cierre = m.Groups[3].Value;    // Cierre de la llave
 
+
+                if (ContenidoFormulario.Contains($"//{Apertura}"))
+                {
+                    return m.Value;
+                }
+
                 // Comentar todo el contenido del bloque
                 return $"//{Apertura}\n    //{Cuerpo.Replace("\n", "\n    //")}\n //{Cierre}";
             });
@@ -171,15 +186,32 @@ namespace Replace_Code_FrontBack
 
         static string ComentarCodigoHTML(string ContenidoFormulario, string PatronExpresionRegular, RegexOptions OpcionesExpresion = RegexOptions.None)
         {
-            ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, Coincidencia => { return $"<!-- {Coincidencia.Value} -->"; }, OpcionesExpresion);
+            ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, Coincidencia => {
+
+                if (ContenidoFormulario.Contains($"<!-- {Coincidencia.Value} -->"))
+                {
+                    return Coincidencia.Value;
+                }
+
+                return $"<!-- {Coincidencia.Value} -->";
+            
+            }, OpcionesExpresion);
 
             return ContenidoFormulario;
         }
 
         static string ComentarCodigoVisualBasic(string ContenidoFormulario, string PatronExpresionRegular, RegexOptions OpcionesExpresion = RegexOptions.None)
         {
+
+            string patronModificado = $"^(?!\\s*').*?({PatronExpresionRegular})";
+
             ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, Coincidencia =>
             {
+                if (ContenidoFormulario.Contains($"'{Coincidencia.Value}"))
+                {
+                    return Coincidencia.Value;
+                }
+
                 return $" '{Coincidencia.Value.Replace("\r\n", "\r\n' ")} ";
             }, OpcionesExpresion);
 
