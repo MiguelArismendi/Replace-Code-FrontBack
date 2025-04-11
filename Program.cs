@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using System.Web.Script.Serialization;
+using System.Linq;
+
 
 
 
@@ -15,6 +17,7 @@ namespace Replace_Code_FrontBack
         {
             string RutaProyecto = AppDomain.CurrentDomain.BaseDirectory;
             string CarpetaArchivos = Path.Combine(RutaProyecto, "Archivos");
+            string RutasArchivosJson = Path.Combine(CarpetaArchivos, "RutasArchivos.json");
 
 
             if (!Directory.Exists(CarpetaArchivos))
@@ -23,7 +26,111 @@ namespace Replace_Code_FrontBack
                 return;
             }
 
-            string[] Archivos = Directory.GetFiles(CarpetaArchivos, "*.*", SearchOption.TopDirectoryOnly);
+
+            if (!File.Exists(RutasArchivosJson))
+            {
+                Console.WriteLine($"El archivo RutasArchivos.json no existe en: {RutasArchivosJson}");
+                return;
+            }
+
+            // Leer y deserializar el archivo JSON
+            var ContenidoJson = File.ReadAllText(RutasArchivosJson);
+            var SerializadorArchivos = new JavaScriptSerializer();
+            RutasArchivos RutasElegidas = SerializadorArchivos.Deserialize<RutasArchivos>(ContenidoJson);
+
+            if (RutasElegidas == null || string.IsNullOrEmpty(RutasElegidas.Origen))
+            {
+                Console.WriteLine("El archivo rutas.json está vacío o mal formateado.");
+                throw new InvalidOperationException("El archivo rutas.json está vacío o mal formateado.");
+            }
+
+            string CarpetaOrigen = RutasElegidas.Origen;
+            string CarpetaDestinoNuevo = RutasElegidas.DestinoArchivoNuevo;
+            string CarpetaDestinoAntiguo = RutasElegidas.DestinoArchivoAntiguo;
+
+            // Verificar si la carpeta de origen existe
+            if (!Directory.Exists(CarpetaOrigen))
+            {
+                Console.WriteLine($"La carpeta de origen no existe: {CarpetaOrigen}");
+                return;
+            }
+
+            if (!Directory.Exists(CarpetaDestinoNuevo))
+            {
+                Console.WriteLine($"La carpeta del destino para el archivo nuevo no existe: {CarpetaDestinoNuevo}");
+                return;
+            }
+
+            if (!Directory.Exists(CarpetaDestinoAntiguo))
+            {
+                Console.WriteLine($"La carpeta del destino para el archivo antiguo no existe: {CarpetaDestinoAntiguo}");
+                return;
+            }
+
+
+
+           
+
+            string[] TodosLosArchivos = Directory.GetFiles(CarpetaOrigen, "*.*", SearchOption.AllDirectories); // SearchOption.TopDirectoryOnly
+
+            string[] Archivos; //= Directory.GetFiles(CarpetaArchivos, "*.*", SearchOption.TopDirectoryOnly);
+
+            if (RutasElegidas.Filtro != null && !string.IsNullOrEmpty(RutasElegidas.Filtro.Tipo) && RutasElegidas.Filtro.Valores != null)
+            {
+                switch (RutasElegidas.Filtro.Tipo.ToLower())
+                {
+                    case "extension":
+                        Archivos = TodosLosArchivos
+                            .Where(archivo => RutasElegidas.Filtro.Valores
+                                .Contains(Path.GetExtension(archivo).ToLower()))
+                            .ToArray();
+                        break;
+
+                    case "nombre":
+                        Archivos = TodosLosArchivos
+                            .Where(archivo => RutasElegidas.Filtro.Valores
+                                .Contains(Path.GetFileName(archivo)) ||
+                                RutasElegidas.Filtro.Valores.Contains(Path.GetFileNameWithoutExtension(archivo)))
+                            .ToArray();
+                        break;
+
+                    case "todos":
+                        Archivos = TodosLosArchivos;
+                        break;
+
+                    default:
+                        Console.WriteLine($"Tipo de filtro no soportado: {RutasElegidas.Filtro.Tipo}. Usando todos los archivos.");
+                        Archivos = TodosLosArchivos;
+                        break;
+                }
+            }
+            else
+            {
+                // Si no hay filtro, procesar todos los archivos
+                Archivos = TodosLosArchivos;
+            }
+
+            // Aplicar el filtro de exclusión (Excluir)
+            if (RutasElegidas.Excluir != null && RutasElegidas.Excluir.Count > 0)
+            {
+                Archivos = Archivos
+                    .Where(archivo => !RutasElegidas.Excluir
+                        .Any(exclusion => Path.GetFileName(archivo).ToLower().Contains(exclusion.ToLower())))
+                    .ToArray();
+            }
+
+            if (Archivos.Length == 0)
+            {
+                Console.WriteLine("No se encontraron archivos que cumplan con el filtro especificado.");
+                return;
+            }
+
+
+            DateTime FechaHoraActual = DateTime.Now;
+
+            // Formato personalizado
+            string UsuarioSistema = Environment.UserName;
+            string FechaFormateada = FechaHoraActual.ToString("dd-MM-yyyy_HH-mm-ss");
 
 
             foreach (string Archivo in Archivos)
@@ -32,8 +139,33 @@ namespace Replace_Code_FrontBack
                 string ContenidoOriginal = File.ReadAllText(Archivo);
                 string ContenidoModificado = ContenidoOriginal;
 
-                string ArchivoViejo = Path.Combine(Path.GetDirectoryName(Archivo),
-                                    Path.GetFileNameWithoutExtension(Archivo) + "Viejo" + Extension);
+                // Obtener ruta relativa del archivo respecto a la carpeta de origen
+                Uri rutaOrigenUri = new Uri(CarpetaOrigen.EndsWith(Path.DirectorySeparatorChar.ToString())
+                            ? CarpetaOrigen
+                            : CarpetaOrigen + Path.DirectorySeparatorChar);
+                Uri archivoUri = new Uri(Archivo);
+                string RutaRelativa = Uri.UnescapeDataString(rutaOrigenUri.MakeRelativeUri(archivoUri).ToString())
+                                            .Replace('/', Path.DirectorySeparatorChar);
+
+
+                
+
+                string NombreArchivoAntiguo = RutaRelativa.Replace(".biofile.com.co", "").Replace(Path.DirectorySeparatorChar, '_'); 
+                string ArchivoViejo = Path.Combine(CarpetaDestinoAntiguo,
+                          $"{UsuarioSistema.Replace(" ", "_")}_{FechaFormateada}_{NombreArchivoAntiguo}");
+
+                //string NombreArchivo = Path.GetFileNameWithoutExtension(Archivo);
+                //string ArchivoViejo = Path.Combine(CarpetaDestinoAntiguo,
+                //                      $"{UsuarioSistema.Replace(" ", "_")}_{FechaFormateada}_{NombreArchivo}{Extension}");
+
+
+
+
+                //UsuarioSistema.Replace(" ","_") + "_" + FechaFormateada + "_" + Path.GetFileNameWithoutExtension(Archivo) + Extension);
+                string CarpetaDestinoArchivo = Path.Combine(CarpetaDestinoNuevo, Path.GetDirectoryName(RutaRelativa));
+
+                string ArchivoNuevo = Path.Combine(CarpetaDestinoArchivo, Path.GetFileName(Archivo));
+
 
                 if (Extension == ".aspx" || Extension == ".vb")
                 {
@@ -51,13 +183,19 @@ namespace Replace_Code_FrontBack
                     continue;
                 }
 
-                // Crear archivo antiguo
-                File.WriteAllText(ArchivoViejo, ContenidoOriginal);
+                if (ContenidoOriginal != ContenidoModificado)
+                {
 
-                // Sobrescribir archivo con los cambios
-                File.WriteAllText(Archivo, ContenidoModificado);
+                    // Crear archivo antiguo
+                    File.WriteAllText(ArchivoViejo, ContenidoOriginal);
 
-                Console.WriteLine($"Procesado: {Archivo}");
+                    // Sobrescribir archivo con los cambios
+                    File.WriteAllText(ArchivoNuevo, ContenidoModificado);
+
+                    Console.WriteLine($"Procesado: {Archivo} -> Nuevo: {ArchivoNuevo}, Antiguo: {ArchivoViejo}");
+
+                }
+               
             }
         }
 
@@ -108,7 +246,7 @@ namespace Replace_Code_FrontBack
                         ContenidoFormulario = ComentarCodigoVisualBasic(ContenidoFormulario, PatronExpresionRegular.PatronExpresionRegular, OpcionesExpresion);
                         break;
                     case "ReemplazarCodigoBloques":
-                        ContenidoFormulario = ReemplazarCodigoBloques(ContenidoFormulario, PatronExpresionRegular.PatronExpresionRegular, PatronExpresionRegular.NuevaLineaReemplazar, OpcionesExpresion, PatronExpresionRegular.IncluirLineaOriginal);
+                        ContenidoFormulario = ReemplazarCodigoBloques(ContenidoFormulario, PatronExpresionRegular.PatronExpresionRegular, PatronExpresionRegular.NuevaLineaReemplazar, OpcionesExpresion, PatronExpresionRegular.IncluirLineaOriginal, PatronExpresionRegular.NuevaLineaAnterior);
                         break;
                     case "ComentarCodigoJavascriptBloques":
                         ContenidoFormulario = ComentarCodigoJavascriptBloques(ContenidoFormulario, PatronExpresionRegular.PatronExpresionRegular, OpcionesExpresion);
@@ -117,31 +255,7 @@ namespace Replace_Code_FrontBack
                         throw new InvalidOperationException($"Método no reconocido: {PatronExpresionRegular.MetodoUsar}");
                 }
                 
-            }
-
-            //Se busca el inicio del content 4 y se agrega el registro del archivo de usuario y un content0 con el style necesario para que funcionen los autocomplete
-            //PatronExpresionRegular = @"(if\s*\([^\)]*Diagnosticos\.length\s*>\s*0\s*\)\s*\{)([\s\S]*?)(?=\s*\}(?!\s*\)\s*;))";//@"(if\s*\([^\)]*Diagnosticos\.length\s*>\s*0\s*\)\s*\{)([\s\S]*?)(?!\s*\)\s*;)"; 
-            //NuevaLineaReemplazar = "                            Diagnosticos.DiagnosticosSelecciona();";
-            //ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, m =>
-            //{
-            //    // Capturamos la apertura y el cierre del if
-            //    string Apertura = m.Groups[1].Value;  // Mantiene el `if` y su apertura
-            //    string Cierre = m.Groups[3].Value;    // Mantiene el cierre del bloque `if`                
-
-            //    // Concatenamos el bloque con el nuevo contenido
-            //    return Apertura + "\n" + NuevaLineaReemplazar + Cierre;
-            //});
-
-            //PatronExpresionRegular = @"(if\s*\([^\)]*HistoricoDiagnosticos\.length\s*>\s*0\s*\)\s*\{)([\s\S]*?)(\})";
-            //ContenidoFormulario = Regex.Replace(ContenidoFormulario, PatronExpresionRegular, m =>
-            //{
-            //    string Apertura = m.Groups[1].Value;  // `if` y apertura de la llave
-            //    string Cuerpo = m.Groups[2].Value;    // Cuerpo del if
-            //    string Cierre = m.Groups[3].Value;    // Cierre de la llave
-
-            //    // Comentar todo el contenido del bloque
-            //    return $"//{Apertura}\n    //{Cuerpo.Replace("\n", "\n    //")}\n //{Cierre}";
-            //});
+            }          
 
             return ContenidoFormulario;
         }
@@ -235,7 +349,7 @@ namespace Replace_Code_FrontBack
             return ContenidoFormulario;
         }
 
-        static string ReemplazarCodigoBloques(string ContenidoFormulario, string PatronExpresionRegular, string NuevoContenido, RegexOptions OpcionesExpresion = RegexOptions.None, bool IncluirLineaOriginal = false)
+        static string ReemplazarCodigoBloques(string ContenidoFormulario, string PatronExpresionRegular, string NuevoContenido, RegexOptions OpcionesExpresion = RegexOptions.None, bool IncluirLineaOriginal = false,string NuevaLineaAnterior = "")
         {
 
             if (ContenidoFormulario.Contains(NuevoContenido))
@@ -250,7 +364,7 @@ namespace Replace_Code_FrontBack
                 string Cierre = m.Groups[3].Value;    // Mantiene el cierre del bloque `if`                
 
                 // Concatenamos el bloque con el nuevo contenido
-                return Apertura + "\n" + NuevoContenido + Cierre;
+                return (NuevaLineaAnterior != "" && NuevaLineaAnterior != null ? NuevaLineaAnterior + "\n" : "") + Apertura + "\n" + NuevoContenido + Cierre;
             });
 
             return ContenidoFormulario;
@@ -302,6 +416,7 @@ namespace Replace_Code_FrontBack
             public string MetodoUsar { get; set; }
             public bool IncluirLineaOriginal { get; set; }
             public string OpcionesExpresion { get; set; }
+            public string NuevaLineaAnterior { get; set; }
 
             public RegexOptions ObtenerOpcionesRegex()
             {
@@ -331,6 +446,21 @@ namespace Replace_Code_FrontBack
                         throw new InvalidOperationException($"Opción de expresión regular no reconocida: {OpcionesExpresion}");
                 }
             }
+        }
+
+        public class RutasArchivos
+        {
+            public string Origen { get; set; }
+            public string DestinoArchivoNuevo { get; set; }
+            public string DestinoArchivoAntiguo { get; set; }
+            public Filtro Filtro { get; set; } // Opcional
+            public List<string> Excluir { get; set; }
+        }
+
+        public class Filtro
+        {
+            public string Tipo { get; set; }
+            public List<string> Valores { get; set; }
         }
     }
 }
