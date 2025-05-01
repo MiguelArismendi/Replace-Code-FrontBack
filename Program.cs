@@ -68,10 +68,78 @@ namespace Replace_Code_FrontBack
             }
 
 
+                       
 
-           
+            // Obtener las carpetas principales donde buscar
+            List<string> CarpetasABuscar = new List<string>();
+            if (RutasElegidas.CarpetasPrincipales != null && RutasElegidas.CarpetasPrincipales.Count > 0)
+            {
+                foreach (var carpeta in RutasElegidas.CarpetasPrincipales)
+                {
+                    string RutaCarpeta = Path.Combine(CarpetaOrigen, carpeta);
+                    if (Directory.Exists(RutaCarpeta))
+                    {
+                        CarpetasABuscar.Add(RutaCarpeta);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"La carpeta {RutaCarpeta} no existe.");
+                    }
+                }
+            }
+            else
+            {
+                CarpetasABuscar.AddRange(Directory.GetDirectories(CarpetaOrigen, "*", SearchOption.TopDirectoryOnly));
 
-            string[] TodosLosArchivos = Directory.GetFiles(CarpetaOrigen, "*.*", SearchOption.AllDirectories); // SearchOption.TopDirectoryOnly
+            }
+
+            if (CarpetasABuscar.Count == 0)
+            {
+                Console.WriteLine("No se encontraron carpetas principales para buscar.");
+                return;
+            }
+
+            // Buscar solo en la subcarpeta "historia" dentro de las carpetas principales
+            List<string> ListaTodosLosArchivos = new List<string>();
+            string SubcarpetaEspecifica = RutasElegidas.SubcarpetaEspecifica;
+            SearchOption searchOption = RutasElegidas.IncluirSubcarpetas ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+
+            foreach (var CarpetaPrincipal in CarpetasABuscar)
+            {
+                // Si no se especifica una subcarpeta, buscar en todas las subcarpetas de la carpeta principal
+                if (string.IsNullOrEmpty(SubcarpetaEspecifica))
+                {
+                    var ArchivosEnCarpeta = Directory.GetFiles(CarpetaPrincipal, "*.*", SearchOption.AllDirectories);
+                    ListaTodosLosArchivos.AddRange(ArchivosEnCarpeta);
+                }
+                else
+                {
+                    // Si se especifica una subcarpeta, buscar solo en esa subcarpeta
+                    string RutaSubcarpeta = Path.Combine(CarpetaPrincipal, SubcarpetaEspecifica);
+
+                    if (!Directory.Exists(RutaSubcarpeta))
+                    {
+                        Console.WriteLine($"La subcarpeta {RutaSubcarpeta} no existe.");
+                        continue;
+                    }
+
+                    var ArchivosEnSubcarpeta = Directory.GetFiles(RutaSubcarpeta, "*.*", searchOption);
+                    ListaTodosLosArchivos.AddRange(ArchivosEnSubcarpeta);
+                }
+            }
+
+            string[] TodosLosArchivos = ListaTodosLosArchivos.ToArray();
+
+            if (TodosLosArchivos.Length == 0)
+            {
+                Console.WriteLine("No se encontraron archivos en las subcarpetas 'HistoriaClinica' de las carpetas especificadas.");
+                return;
+            }
+
+
+
+
+            //string[] TodosLosArchivos = Directory.GetFiles(CarpetaOrigen, "*.*", SearchOption.AllDirectories); // SearchOption.TopDirectoryOnly
 
             string[] Archivos; //= Directory.GetFiles(CarpetaArchivos, "*.*", SearchOption.TopDirectoryOnly);
 
@@ -138,21 +206,37 @@ namespace Replace_Code_FrontBack
                 string Extension = Path.GetExtension(Archivo).ToLower();
                 string ContenidoOriginal = File.ReadAllText(Archivo);
                 string ContenidoModificado = ContenidoOriginal;
+                DirectoryInfo ContadorArchivosDestino = new DirectoryInfo(CarpetaDestinoAntiguo);
 
                 // Obtener ruta relativa del archivo respecto a la carpeta de origen
-                Uri rutaOrigenUri = new Uri(CarpetaOrigen.EndsWith(Path.DirectorySeparatorChar.ToString())
+                Uri RutaOrigenUri = new Uri(CarpetaOrigen.EndsWith(Path.DirectorySeparatorChar.ToString())
                             ? CarpetaOrigen
                             : CarpetaOrigen + Path.DirectorySeparatorChar);
-                Uri archivoUri = new Uri(Archivo);
-                string RutaRelativa = Uri.UnescapeDataString(rutaOrigenUri.MakeRelativeUri(archivoUri).ToString())
+                Uri ArchivoUri = new Uri(Archivo);
+                string RutaRelativa = Uri.UnescapeDataString(RutaOrigenUri.MakeRelativeUri(ArchivoUri).ToString())
                                             .Replace('/', Path.DirectorySeparatorChar);
 
+                               
+                string[] PartesRutaCompleta = RutaRelativa.Split(new[] { '\\' }, StringSplitOptions.RemoveEmptyEntries);
 
                 
+                //string NombreSubdominio = PartesRutaCompleta[0];
+                string NombreDelFormulario = PartesRutaCompleta[PartesRutaCompleta.Length - 1];
 
-                string NombreArchivoAntiguo = RutaRelativa.Replace(".biofile.com.co", "").Replace(Path.DirectorySeparatorChar, '_'); 
+                string PrefijoSubcarpetas = "";
+                if (PartesRutaCompleta.Length > 1)
+                {
+                    // Si hay subcarpetas, tomar todas las partes menos la última (el archivo)
+                    string[] subcarpetas = new ArraySegment<string>(PartesRutaCompleta, 0, PartesRutaCompleta.Length - 1).ToArray();
+                    PrefijoSubcarpetas = string.Join("_", subcarpetas); // "historia" o "historia_general"
+                }
+
+                int CantidadArchivosDestino = ContadorArchivosDestino.GetFiles().Length;
+                //string NombreArchivoAntiguo = RutaRelativa.Replace(".biofile.com.co", "").Replace(Path.DirectorySeparatorChar, '_');
                 string ArchivoViejo = Path.Combine(CarpetaDestinoAntiguo,
-                          $"{UsuarioSistema.Replace(" ", "_")}_{FechaFormateada}_{NombreArchivoAntiguo}");
+                          $"{PrefijoSubcarpetas.Replace(".biofile.com.co", "")}-{UsuarioSistema}-{CantidadArchivosDestino}-{NombreDelFormulario}");
+                //string ArchivoViejo = Path.Combine(CarpetaDestinoAntiguo,
+                //          $"{UsuarioSistema.Replace(" ", "_")}_{FechaFormateada}_{NombreArchivoAntiguo}");
 
                 //string NombreArchivo = Path.GetFileNameWithoutExtension(Archivo);
                 //string ArchivoViejo = Path.Combine(CarpetaDestinoAntiguo,
@@ -455,6 +539,9 @@ namespace Replace_Code_FrontBack
             public string DestinoArchivoAntiguo { get; set; }
             public Filtro Filtro { get; set; } // Opcional
             public List<string> Excluir { get; set; }
+            public List<string> CarpetasPrincipales { get; set; } // Nuevo campo
+            public string SubcarpetaEspecifica { get; set; } // Nuevo campo
+            public bool IncluirSubcarpetas { get; set; } // Nuevo campo
         }
 
         public class Filtro
